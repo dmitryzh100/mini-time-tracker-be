@@ -91,6 +91,33 @@ EMAIL_VERIFICATION_EXPIRATION_HOURS=24
 PASSWORD_RESET_EXPIRATION_HOURS=1
 ```
 
+### Gmail SMTP Setup
+
+To use Gmail for sending emails (verification, password reset), follow these steps:
+
+1. **Enable 2-Factor Authentication**
+   - Go to [Google Account Security](https://myaccount.google.com/security)
+   - Under "Signing in to Google", enable "2-Step Verification"
+
+2. **Generate an App Password**
+   - Go to [Google App Passwords](https://myaccount.google.com/apppasswords)
+   - Select "Mail" as the app and your device type
+   - Click "Generate"
+   - Copy the 16-character password (without spaces)
+
+3. **Configure environment variables**
+
+```bash
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_SECURE=false
+MAIL_USER=your-email@gmail.com
+MAIL_PASSWORD=xxxx xxxx xxxx xxxx  # App Password from step 2
+MAIL_FROM="Mini Time Tracker <your-email@gmail.com>"
+```
+
+> **Note:** Regular Gmail passwords won't work. You must use an App Password. If you don't see the App Passwords option, ensure 2-Factor Authentication is enabled first.
+
 4. **Run database migrations**
 
 ```bash
@@ -365,6 +392,183 @@ src/
 prisma/
 ├── schema.prisma                     # Database schema
 └── seed.ts                           # Seed data script
+```
+
+## Architecture
+
+### Overview
+
+The application follows a **modular monolith** architecture built on NestJS, organized into feature modules with clear separation of concerns:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        HTTP Request                          │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Guards (JWT Auth)                        │
+│              JwtAuthGuard / OptionalJwtAuthGuard             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Validation (Zod Pipe)                      │
+│                    ZodValidationPipe                         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                       Controllers                            │
+│    AuthController, TimeEntriesController, LeavesController   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        Services                              │
+│      AuthService, TimeEntriesService, LeavesService          │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Prisma ORM Layer                          │
+│                      PrismaService                           │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      PostgreSQL                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Design Patterns
+
+| Pattern | Implementation | Purpose |
+|---------|---------------|---------|
+| **Dependency Injection** | NestJS IoC Container | Loose coupling, testability |
+| **Repository Pattern** | PrismaService | Database abstraction |
+| **DTO Pattern** | Zod schemas + classes | Request validation, type safety |
+| **Guard Pattern** | JwtAuthGuard, JwtRefreshGuard | Authentication/authorization |
+| **Decorator Pattern** | @CurrentUser, @Public | Clean controller signatures |
+| **Strategy Pattern** | Passport JWT strategies | Flexible authentication |
+| **Module Pattern** | Feature modules | Encapsulation, lazy loading |
+
+### Module Structure
+
+Each feature module follows a consistent internal structure:
+
+```
+module/
+├── constants/
+│   ├── index.ts                 # Re-exports
+│   ├── fields.constants.ts      # Field display names
+│   ├── messages.constants.ts    # User-facing messages
+│   └── validation.constants.ts  # Validation rules (min/max, lengths)
+├── dto/                         # Data Transfer Objects (Swagger docs)
+├── enums/                       # Field enums for type-safe constants access
+├── interfaces/                  # TypeScript interfaces
+├── schemas/                     # Zod validation schemas
+├── [feature].controller.ts      # HTTP layer
+├── [feature].service.ts         # Business logic
+└── [feature].module.ts          # Module definition
+```
+
+### Constants Organization
+
+The project uses a hierarchical constants system for maintainability:
+
+```
+common/constants/
+├── validation.constants.ts    # Aggregates all module validation rules
+├── fields.constants.ts        # Aggregates all module field names
+└── messages.constants.ts      # Generic reusable messages
+
+modules/[feature]/constants/
+├── validation.constants.ts    # Module-specific validation rules
+├── fields.constants.ts        # Module-specific field names
+└── messages.constants.ts      # Module-specific messages (uses common)
+```
+
+**Usage in schemas:**
+```typescript
+const rules = Validation.timeEntry(TimeEntryField.Hours);
+const field = FieldNames.timeEntry(TimeEntryField.Hours);
+
+hours: z
+  .number()
+  .max(rules.max!, Messages.max(field, rules.max!))
+```
+
+### Authentication Flow
+
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│  Client  │────▶│ Sign Up  │────▶│  Email   │────▶│  Verify  │
+└──────────┘     └──────────┘     │  Sent    │     │  Email   │
+                                  └──────────┘     └──────────┘
+                                                        │
+┌──────────┐     ┌──────────┐     ┌──────────┐         │
+│  Client  │────▶│ Sign In  │────▶│  Tokens  │◀────────┘
+└──────────┘     └──────────┘     │ Returned │
+                                  └──────────┘
+                                       │
+                      ┌────────────────┴────────────────┐
+                      ▼                                 ▼
+               ┌─────────────┐                  ┌─────────────┐
+               │   Access    │                  │   Refresh   │
+               │   Token     │                  │   Token     │
+               │  (15 min)   │                  │   (7 days)  │
+               └─────────────┘                  └─────────────┘
+                      │                                 │
+                      ▼                                 ▼
+               ┌─────────────┐                  ┌─────────────┐
+               │  API Calls  │                  │  /refresh   │
+               │  (Bearer)   │                  │  endpoint   │
+               └─────────────┘                  └─────────────┘
+```
+
+### Validation Strategy
+
+The application uses a two-layer validation approach:
+
+1. **Zod Schemas** - Input validation with type inference
+   - Defined in `schemas/` folder
+   - Used via `ZodValidationPipe`
+   - Validates request body, provides detailed error messages
+
+2. **Service Layer** - Business rule validation
+   - Database-dependent validations (e.g., daily hours limit)
+   - Cross-entity validations (e.g., overlapping leaves)
+   - Ownership checks
+
+```typescript
+// Schema validation (input)
+export const createTimeEntrySchema = z.object({
+  hours: z.number().positive().max(24),
+  // ...
+});
+
+// Service validation (business logic)
+async validateDailyHoursLimit(date: string, hours: number, userId: number) {
+  const existing = await this.prisma.timeEntry.aggregate({...});
+  if (existing + hours > MAX_DAILY_HOURS) {
+    throw new BadRequestException(...);
+  }
+}
+```
+
+### Error Handling
+
+All user-facing messages are centralized in constants:
+
+```typescript
+// Common messages (reusable)
+Messages.notFound('Time entry', 1)  // "Time entry with ID 1 not found"
+Messages.required('Email')          // "Email is required"
+
+// Module-specific messages
+TimeEntryMessages.dailyHoursLimitExceeded(8, 20, 4)
+// "Cannot add 8 hours. Maximum 24 hours per day allowed..."
 ```
 
 ## Database Schema
