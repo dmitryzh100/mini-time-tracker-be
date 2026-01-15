@@ -18,18 +18,16 @@ const fields = {
 };
 
 export const signUpSchema = z.object({
-  email: z.string().email(Messages.invalid(fields.email)),
+  email: z.email({ error: Messages.invalid(fields.email) }),
   password: z
-    .string({ message: Messages.required(fields.password) })
-    .min(
-      rules.password.minLength!,
-      Messages.minLength(fields.password, rules.password.minLength!),
-    )
-    .max(
-      rules.password.maxLength!,
-      Messages.maxLength(fields.password, rules.password.maxLength!),
-    )
-    .regex(AuthRegex.password, AuthMessages.passwordRegex()),
+    .string({ error: Messages.required(fields.password) })
+    .min(rules.password.minLength!, {
+      error: Messages.minLength(fields.password, rules.password.minLength!),
+    })
+    .max(rules.password.maxLength!, {
+      error: Messages.maxLength(fields.password, rules.password.maxLength!),
+    })
+    .regex(AuthRegex.password, { error: AuthMessages.passwordRegex() }),
   firstName: z
     .string()
     .min(rules.firstName.minLength!)

@@ -102,9 +102,8 @@ export class AuthController {
     status: HttpStatusCode.UNAUTHORIZED,
     description: 'Invalid refresh token',
   })
-  @UsePipes(new ZodValidationPipe(refreshTokenSchema))
   async refresh(
-    @Body() _dto: RefreshTokenDto,
+    @Body(new ZodValidationPipe(refreshTokenSchema)) _dto: RefreshTokenDto,
     @CurrentUser() user: CurrentUserData & { tokenId: string },
   ): Promise<TokenResponse> {
     return this.authService.refreshTokens(user.id, user.email, user.tokenId);

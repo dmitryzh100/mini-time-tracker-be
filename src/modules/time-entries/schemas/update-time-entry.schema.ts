@@ -17,27 +17,33 @@ const fields = {
 };
 
 export const updateTimeEntrySchema = z.object({
-  date: z.iso.date(Messages.date(fields.date)).optional(),
+  date: z.iso.date({ error: Messages.date(fields.date) }).optional(),
   hours: z
     .number()
-    .positive(Messages.positive(fields.hours))
-    .max(rules.hours.max!, Messages.max(fields.hours, rules.hours.max!))
+    .positive({ error: Messages.positive(fields.hours) })
+    .max(rules.hours.max!, {
+      error: Messages.max(fields.hours, rules.hours.max!),
+    })
     .optional(),
   description: z
     .string()
-    .min(
-      rules.description.minLength!,
-      Messages.minLength(fields.description, rules.description.minLength!),
-    )
-    .max(
-      rules.description.maxLength!,
-      Messages.maxLength(fields.description, rules.description.maxLength!),
-    )
+    .min(rules.description.minLength!, {
+      error: Messages.minLength(
+        fields.description,
+        rules.description.minLength!,
+      ),
+    })
+    .max(rules.description.maxLength!, {
+      error: Messages.maxLength(
+        fields.description,
+        rules.description.maxLength!,
+      ),
+    })
     .optional(),
   projectId: z
     .number()
-    .int(Messages.integer(fields.projectId))
-    .positive(Messages.positive(fields.projectId))
+    .int({ error: Messages.integer(fields.projectId) })
+    .positive({ error: Messages.positive(fields.projectId) })
     .optional(),
 });
 

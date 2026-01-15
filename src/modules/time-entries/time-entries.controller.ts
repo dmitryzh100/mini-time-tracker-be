@@ -10,7 +10,6 @@ import {
   Patch,
   Post,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -63,9 +62,8 @@ export class TimeEntriesController {
     status: HttpStatusCode.NOT_FOUND,
     description: 'Project not found',
   })
-  @UsePipes(new ZodValidationPipe(createTimeEntrySchema))
   async create(
-    @Body() dto: CreateTimeEntryDto,
+    @Body(new ZodValidationPipe(createTimeEntrySchema)) dto: CreateTimeEntryDto,
     @CurrentUser('id') userId: number,
   ): Promise<TimeEntry> {
     return this.timeEntriesService.create(dto, userId);
@@ -146,10 +144,9 @@ export class TimeEntriesController {
     status: HttpStatusCode.NOT_FOUND,
     description: 'Time entry or project not found',
   })
-  @UsePipes(new ZodValidationPipe(updateTimeEntrySchema))
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateTimeEntryDto,
+    @Body(new ZodValidationPipe(updateTimeEntrySchema)) dto: UpdateTimeEntryDto,
     @CurrentUser('id') userId: number,
   ): Promise<TimeEntry> {
     await this.verifyOwnership(id, userId);

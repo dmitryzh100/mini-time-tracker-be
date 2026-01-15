@@ -16,25 +16,31 @@ const fields = {
 };
 
 export const createTimeEntrySchema = z.object({
-  date: z.iso.date(Messages.date(fields.date)),
+  date: z.iso.date({ error: Messages.date(fields.date) }),
   hours: z
-    .number({ message: Messages.required(fields.hours) })
-    .positive(Messages.positive(fields.hours))
-    .max(rules.hours.max!, Messages.max(fields.hours, rules.hours.max!)),
+    .number({ error: Messages.required(fields.hours) })
+    .positive({ error: Messages.positive(fields.hours) })
+    .max(rules.hours.max!, {
+      error: Messages.max(fields.hours, rules.hours.max!),
+    }),
   description: z
-    .string({ message: Messages.required(fields.description) })
-    .min(
-      rules.description.minLength!,
-      Messages.minLength(fields.description, rules.description.minLength!),
-    )
-    .max(
-      rules.description.maxLength!,
-      Messages.maxLength(fields.description, rules.description.maxLength!),
-    ),
+    .string({ error: Messages.required(fields.description) })
+    .min(rules.description.minLength!, {
+      error: Messages.minLength(
+        fields.description,
+        rules.description.minLength!,
+      ),
+    })
+    .max(rules.description.maxLength!, {
+      error: Messages.maxLength(
+        fields.description,
+        rules.description.maxLength!,
+      ),
+    }),
   projectId: z
-    .number({ message: Messages.required(fields.projectId) })
-    .int(Messages.integer(fields.projectId))
-    .positive(Messages.positive(fields.projectId)),
+    .number({ error: Messages.required(fields.projectId) })
+    .int({ error: Messages.integer(fields.projectId) })
+    .positive({ error: Messages.positive(fields.projectId) }),
 });
 
 export type CreateTimeEntryDto = z.infer<typeof createTimeEntrySchema>;

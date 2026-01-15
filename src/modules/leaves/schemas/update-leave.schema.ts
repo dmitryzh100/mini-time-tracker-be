@@ -19,17 +19,18 @@ export const updateLeaveSchema = z
   .object({
     type: z
       .enum(LeaveType, {
-        message: Messages.invalid(fields.type),
+        error: Messages.invalid(fields.type),
       })
       .optional(),
-    startDate: z.iso.date(Messages.date(fields.startDate)).optional(),
-    endDate: z.iso.date(Messages.date(fields.endDate)).optional(),
+    startDate: z.iso
+      .date({ error: Messages.date(fields.startDate) })
+      .optional(),
+    endDate: z.iso.date({ error: Messages.date(fields.endDate) }).optional(),
     reason: z
       .string()
-      .max(
-        rules.reason.maxLength!,
-        Messages.maxLength(fields.reason, rules.reason.maxLength!),
-      )
+      .max(rules.reason.maxLength!, {
+        error: Messages.maxLength(fields.reason, rules.reason.maxLength!),
+      })
       .nullable()
       .optional(),
   })

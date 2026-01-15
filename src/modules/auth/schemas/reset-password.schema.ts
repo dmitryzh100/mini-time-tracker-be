@@ -12,14 +12,13 @@ const fields = {
 };
 
 export const resetPasswordSchema = z.object({
-  token: z.string().min(1, AuthMessages.tokenRequired()),
+  token: z.string().min(1, { error: AuthMessages.tokenRequired() }),
   password: z
     .string()
-    .min(
-      rules.password.minLength!,
-      Messages.minLength(fields.password, rules.password.minLength!),
-    )
-    .regex(AuthRegex.password, AuthMessages.passwordRegex()),
+    .min(rules.password.minLength!, {
+      error: Messages.minLength(fields.password, rules.password.minLength!),
+    })
+    .regex(AuthRegex.password, { error: AuthMessages.passwordRegex() }),
 });
 
 export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;

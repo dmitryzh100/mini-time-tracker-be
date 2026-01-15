@@ -1,10 +1,16 @@
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Project } from '@prisma/client';
 import { HttpStatusCode } from '@common/constants';
 import { ProjectsService } from './projects.service';
 
 @ApiTags('projects')
+@ApiBearerAuth('JWT-auth')
 @Controller('projects')
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}

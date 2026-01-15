@@ -18,16 +18,15 @@ const fields = {
 export const createLeaveSchema = z
   .object({
     type: z.enum(LeaveType, {
-      message: Messages.invalid(fields.type),
+      error: Messages.invalid(fields.type),
     }),
-    startDate: z.iso.date(Messages.date(fields.startDate)),
-    endDate: z.iso.date(Messages.date(fields.endDate)),
+    startDate: z.iso.date({ error: Messages.date(fields.startDate) }),
+    endDate: z.iso.date({ error: Messages.date(fields.endDate) }),
     reason: z
       .string()
-      .max(
-        rules.reason.maxLength!,
-        Messages.maxLength(fields.reason, rules.reason.maxLength!),
-      )
+      .max(rules.reason.maxLength!, {
+        error: Messages.maxLength(fields.reason, rules.reason.maxLength!),
+      })
       .optional(),
   })
   .refine((data) => new Date(data.endDate) >= new Date(data.startDate), {
