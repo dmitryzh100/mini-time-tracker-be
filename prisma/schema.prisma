@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int            @id @default(autoincrement())
+  email           String         @unique
+  passwordHash    String
+  firstName       String?
+  lastName        String?
+  isEmailVerified Boolean        @default(true)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  timeEntries     TimeEntry[]
+  refreshTokens   RefreshToken[]
+  passwordResets  PasswordReset[]
+  leaves          Leave[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@map("refresh_tokens")
+}
+
+model PasswordReset {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("password_resets")
+}
+
+model PendingRegistration {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  token        String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@map("pending_registrations")
+}
+
+model Project {
+  id          Int         @id @default(autoincrement())
+  name        String      @unique
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  timeEntries TimeEntry[]
+
+  @@map("projects")
+}
+
+model TimeEntry {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @db.Date
+  hours       Float
+  description String
+  projectId   Int
+  project     Project  @relation(fields: [projectId], references: [id])
+  userId      Int?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("time_entries")
+}
+
+enum LeaveType {
+  SICK_LEAVE
+  DAY_OFF
+}
+
+model Leave {
+  id          Int               @id @default(autoincrement())
+  type        LeaveType
+  startDate   DateTime          @db.Date
+  endDate     DateTime          @db.Date
+  reason      String?
+  userId      Int
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments LeaveAttachment[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("leaves")
+}
+
+model LeaveAttachment {
+  id           Int      @id @default(autoincrement())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  data         String   @db.Text
+  leaveId      Int
+  leave        Leave    @relation(fields: [leaveId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@map("leave_attachments")
+}
